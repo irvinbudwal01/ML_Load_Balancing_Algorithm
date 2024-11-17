@@ -38,6 +38,7 @@ class SimplePacketSwitch:
                  element_id: str = "",
                  debug: bool = False) -> None:
         self.env = env
+        self.weights = []
         self.ports = []
         for port in range(nports):
             self.ports.append(
