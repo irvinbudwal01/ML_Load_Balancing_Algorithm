@@ -142,6 +142,7 @@ sender5.out = wire5_downstream
 wire5_downstream.out = switch
 
 fib = {0: 0, 1: 1, 2: 2, 3: 0, 4: 1, 10000: 3, 10001: 4, 10002: 5, 10003: 6, 10004: 7} #configure switch
+
 switch.demux.fib = fib
 switch.demux.outs[0].out = wire6_downstream #going to sinks down
 switch.demux.outs[1].out = wire7_downstream
@@ -173,20 +174,32 @@ wire5_upstream.out = sender5
 
 env.run(until=100)
 
+# print("delays in receiver1")
+# for x in receiver.waits[0]:
+#     print(x)
+
+# print("delays in receiver2")
+# for x in receiver2.waits[1]:
+#     print(x)
+
+# print("delays in receiver3")
+# for x in receiver3.waits[2]:
+#     print(x)
+
 print(
-    "Flow 1 packet delays: "
-    + ", ".join(["{:.2f}".format(x) for x in receiver.waits["flow 1"]])
+    "Receiver 1 packet delays: "
+    + ", ".join(["{:.2f}".format(x) for x in receiver.waits[0]])
 )
 print(
-    "Flow 2 packet delays: "
-    + ", ".join(["{:.2f}".format(x) for x in receiver2.waits["flow 1"]])
+    "Receiver 2 packet delays: "
+    + ", ".join(["{:.2f}".format(x) for x in receiver2.waits[1]])
 )
 
 print(
-    "Flow 3 packet delays: "
-    + ", ".join(["{:.2f}".format(x) for x in receiver3.waits["flow 1"]])
+    "Receiver 3 packet delays: "
+    + ", ".join(["{:.2f}".format(x) for x in receiver3.waits[2]])
 )
-print(
-    "Flow 4 packet delays: "
-    + ", ".join(["{:.2f}".format(x) for x in receiver.waits["flow 1"]])
-)
+# print(
+#     "Flow 4 packet delays: "
+#     + ", ".join(["{:.2f}".format(x) for x in receiver.waits["flow 1"]])
+# )

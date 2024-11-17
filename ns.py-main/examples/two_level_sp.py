@@ -67,7 +67,7 @@ for grp_id in range(total_groups):
                                  initial_delay=0.0,
                                  finish=3,
                                  flow_id=f"grp_{grp_id}_flow_{flow_id}",
-                                 debug=True)
+                                 debug=False)
         tail_drop_buffer = Port(env,
                                 0,
                                 qlimit=None,
