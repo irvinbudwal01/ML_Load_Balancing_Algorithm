@@ -22,23 +22,20 @@ model = NetworkOptimizer(input_size, hidden_size, output_size)
 # Define Loss and Optimizer
 optimizer = optim.Adam(model.parameters(), lr=0.01)
 
-# Updated reward function with normalization and adjusted balance penalty
 def reward_function(weights, latency, packets_dropped, server_utilization):
-    # Normalize the weights to ensure the sum is 1
+    # Normalize weights to ensure they sum to 1
     weights = weights / weights.sum()
 
-    # Reward for balanced weights (closer to equal distribution)
-    balance_penalty = abs(weights[0] - 1/3) + abs(weights[1] - 1/3) + abs(weights[2] - 1/3)
+    # Stronger penalty for any weight greater than 60% or less than 10%
+    imbalance_penalty = 200 * (max(weights[0], 1 - weights[0]) + max(weights[1], 1 - weights[1]) + max(weights[2], 1 - weights[2]))
 
-    # Reward for good performance (low latency, few dropped packets, and optimal utilization)
+    # Performance reward (negative for latency and dropped packets, positive for utilization)
     performance_reward = -latency.sum() - packets_dropped.sum() + server_utilization.sum()
 
-    # Regularization term to encourage even distribution (minimizing variance)
-    variance_penalty = (weights.var() - 1/9) ** 2  # 1/9 is the target variance for equal distribution
-
-    # Total reward: higher performance with balanced traffic distribution
-    total_reward = performance_reward - balance_penalty - variance_penalty
+    # Total reward: balance between performance and balanced traffic distribution
+    total_reward = performance_reward - imbalance_penalty
     return total_reward
+
 
 # Training loop update
 epochs = 100
