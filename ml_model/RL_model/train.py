@@ -18,7 +18,7 @@ for episode in range(num_episodes):
         action = agent.select_action(state)
 
         # Take the action in the environment
-        next_state, reward, done = env.step(action)
+        next_state, reward, done, _ = env.step(action)
 
         # Store the experience in the agent's replay buffer
         if next_state is not None:  # Skip storing if there's no next state

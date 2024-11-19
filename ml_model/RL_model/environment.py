@@ -34,4 +34,4 @@ class DataCenterEnvironment:
         else:
             next_state = None  # No next state if done
 
-        return next_state, reward, done
+        return next_state, reward, done, {}

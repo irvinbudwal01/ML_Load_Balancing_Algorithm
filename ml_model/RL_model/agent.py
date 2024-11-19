@@ -11,20 +11,14 @@ class LSTMPolicyModel(nn.Module):
         self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, state):
+        # Ensure state is 3D: (batch_size, sequence_length, input_dim)
+        if state.dim() == 2:
+            state = state.unsqueeze(1)
+        
         # LSTM forward pass
         out, _ = self.lstm(state)
-        
-        # Check if output is 2D, and add a dimension to make it 3D if necessary
-        if len(out.shape) == 2:
-            out = out.unsqueeze(1)  # Add a dummy sequence dimension (e.g., from [batch_size, feature_size] to [batch_size, 1, feature_size])
-        
-        # Use the last output of the LSTM (the last timestep)
-        out = out[:, -1, :]
-        
-        # Pass through the fully connected layer
-        q_values = self.fc(out)
-        
-        return q_values
+        out = self.fc(out[:, -1, :])
+        return out
 
 
 class DQNAgent:
