@@ -1,44 +1,52 @@
 import torch
 import torch.optim as optim
 import torch.nn as nn
-from data_loader import load_network_data
 from model import NetworkOptimizer
 import pandas as pd
 
-# Load Data
+# Load and preprocess data
 data = pd.read_csv('network_data.csv')
-sequence_data = torch.tensor(data.values, dtype=torch.float32).unsqueeze(0)  # (1, sequence_length, input_size)
+data.columns = data.columns.str.strip()  # Clean column names
 
-# Set target weights (for example purposes)
-#                            [packets_dropped, latency, network_utilization]
-target_weights = torch.tensor([[0.8, 0.7, 0.9]], dtype=torch.float32)  # Adjusted to match the CSV column order
+# Extract input features (avg_latency, avg_packets_dropped, avg_server_utilization)
+input_features = ['avg_latency', 'avg_packets_dropped', 'avg_server_utilization']
+sequence_data = torch.tensor(data[input_features].values, dtype=torch.float32).unsqueeze(0)  # Shape: (1, num_servers, 3)
 
 # Define Model
-input_size = data.shape[1]
-hidden_size = 64
-output_size = 3  # Adjusted to match the target weights size
+input_size = len(input_features)  # Number of features per server
+hidden_size = 64  # Hidden size for the LSTM
+output_size = len(data)  # Number of servers (each server gets a weight)
 model = NetworkOptimizer(input_size, hidden_size, output_size)
 
 # Define Loss and Optimizer
 criterion = nn.MSELoss()  # Mean Squared Error Loss
 optimizer = optim.Adam(model.parameters(), lr=0.01)
 
-# Training loop
-epochs = 100  # Adjust as needed
+# Target weights (example for demonstration; modify based on your logic)
+# In a real scenario, this could be dynamically determined or based on ground truth
+target_weights = torch.tensor([[0.2, 0.3, 0.5]], dtype=torch.float32)  # Adjust weights for servers
 
+# Training loop
+epochs = 100  # Number of training iterations
 for epoch in range(epochs):
     model.train()  # Set model to training mode
 
     # Forward pass
-    output = model(sequence_data)
-    loss = criterion(output, target_weights)  # Compare output with target
+    output = model(sequence_data)  # Predict weights for servers
+    loss = criterion(output, target_weights)  # Compare predictions with target weights
 
     # Backward pass and optimization
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
 
-    if (epoch + 1) % 10 == 0:
+    if (epoch + 1) % 10 == 0:  # Print every 10 epochs
         print(f"Epoch [{epoch + 1}/{epochs}], Loss: {loss.item():.4f}")
 
-print("\nTrained Model Output:", model(sequence_data))
+# Display final output
+model.eval()  # Set model to evaluation mode
+final_weights = model(sequence_data).detach().numpy().flatten()
+print("------------------------------------------------------")
+for i, weight in enumerate(final_weights):
+    print(f"Server {i + 1} Traffic Weight: {weight:.4f}")
+print("------------------------------------------------------")
