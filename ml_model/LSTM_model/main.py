@@ -48,5 +48,5 @@ model.eval()  # Set model to evaluation mode
 final_weights = model(sequence_data).detach().numpy().flatten()
 print("------------------------------------------------------")
 for i, weight in enumerate(final_weights):
-    print(f"Server {i + 1} Traffic Weight: {weight:.4f}")
+    print(f"Server {i} Traffic Weight: {weight:.4f}")
 print("------------------------------------------------------")
