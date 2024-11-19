@@ -1,24 +1,33 @@
 import numpy as np
+import pandas as pd
 import random
 
-# Environment setup (dummy example, replace with actual environment logic)
-class DummyEnv:
-    def __init__(self):
-        self.state_space = [(50, 110, 30), (60, 120, 40), (70, 130, 50)]  # Example states
-        self.action_space = [0, 1, 2]  # Example actions
-        self.current_state = self.state_space[0]
-
+# Environment setup using data from the CSV
+class CSVEnv:
+    def __init__(self, csv_file):
+        self.df = pd.read_csv(csv_file)  # Load the CSV file
+        self.state_columns = ['packets_dropped', 'latency', 'network_utilization']  # State columns from CSV
+        self.state_space = self.df[self.state_columns].values.tolist()  # List of state values
+        self.action_space = [0, 1, 2]  # Actions, modify as needed
+        self.current_state_idx = 0  # Start at the first state (index)
+        
     def reset(self):
-        # Reset the environment to the initial state
-        self.current_state = self.state_space[0]
-        return self.current_state
+        # Reset the environment to the first state
+        self.current_state_idx = 0
+        return self.state_space[self.current_state_idx]
 
     def step(self, action):
-        # Dummy logic for environment step
-        # Here, `action` is just a random choice for simplicity
-        next_state = random.choice(self.state_space)
-        reward = -abs(action - 1)  # Example reward function (modify as needed)
-        done = random.choice([True, False])  # End condition
+        # Find the next state based on the action (assuming the action results in a transition)
+        # Here we will just move to the next state index for simplicity
+        next_state_idx = (self.current_state_idx + 1) % len(self.state_space)  # Loop back to 0 if end
+        next_state = self.state_space[next_state_idx]
+        
+        # Define reward logic here
+        # Example reward: (You can modify this based on your optimization goals)
+        reward = -abs(action - 1)  # Modify this according to your specific reward logic
+        
+        done = (next_state_idx == len(self.state_space) - 1)  # End when we reach the last state
+        self.current_state_idx = next_state_idx  # Update the current state index
         return next_state, reward, done
 
 # Q-learning parameters
@@ -30,24 +39,20 @@ alpha = 0.1  # Learning rate
 gamma = 0.9  # Discount factor
 max_steps_per_episode = 100  # Max steps per episode
 
-# Define action and state space
-action_space = [0, 1, 2]  # Actions, modify as needed
-state_space = [(50, 110, 30), (60, 120, 40), (70, 130, 50)]  # States, modify as needed
+# Read CSV file (modify the path to your actual CSV)
+csv_file = 'network_data.csv'  # Modify with the correct path
+env = CSVEnv(csv_file)
 
 # Initialize Q-table with zeros
-q_table = np.zeros((len(state_space), len(action_space)))
+q_table = np.zeros((len(env.state_space), len(env.action_space)))
 
-# Create the environment (replace with actual environment)
-env = DummyEnv()
-
-# Track rewards for analysis
-episode_rewards = []
-
-# Helper function to get index of state in state space
+# Helper function to get state index (just for indexing)
 def get_state_index(state):
-    return state_space.index(state)
+    return env.state_space.index(state)
 
 # Q-learning training loop
+episode_rewards = []  # Track rewards for analysis
+
 for episode in range(num_episodes):
     state = env.reset()  # Reset the environment
     state_idx = get_state_index(state)
@@ -58,17 +63,17 @@ for episode in range(num_episodes):
     while not done and steps < max_steps_per_episode:
         # Exploration vs exploitation
         if np.random.rand() < epsilon:
-            action = random.choice(action_space)  # Exploration
+            action = random.choice(env.action_space)  # Exploration
         else:
-            action = action_space[np.argmax(q_table[state_idx])]  # Exploitation
+            action = env.action_space[np.argmax(q_table[state_idx])]  # Exploitation
 
         # Take action, observe reward and next state
         next_state, reward, done = env.step(action)
         next_state_idx = get_state_index(next_state)
 
         # Update Q-value
-        q_table[state_idx, action] = q_table[state_idx, action] + alpha * (
-            reward + gamma * np.max(q_table[next_state_idx]) - q_table[state_idx, action]
+        q_table[state_idx, env.action_space.index(action)] = q_table[state_idx, env.action_space.index(action)] + alpha * (
+            reward + gamma * np.max(q_table[next_state_idx]) - q_table[state_idx, env.action_space.index(action)]
         )
 
         # Update state
