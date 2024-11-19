@@ -5,7 +5,7 @@ from model import NetworkOptimizer
 import pandas as pd
 
 # Load and preprocess data
-data = pd.read_csv('network_data.csv')
+data = pd.read_csv('../dummy_data/network_data.csv')
 data.columns = data.columns.str.strip()  # Clean column names
 
 # Extract input features (avg_latency, avg_packets_dropped, avg_server_utilization)
@@ -26,6 +26,9 @@ optimizer = optim.Adam(model.parameters(), lr=0.01)
 # In a real scenario, this could be dynamically determined or based on ground truth
 target_weights = torch.tensor([[0.2, 0.3, 0.5]], dtype=torch.float32)  # Adjust weights for servers
 
+print("-------------------------------------")
+print("LSTM Model")
+print("-------------------------------------")
 # Training loop
 epochs = 100  # Number of training iterations
 for epoch in range(epochs):
@@ -46,7 +49,7 @@ for epoch in range(epochs):
 # Display final output
 model.eval()  # Set model to evaluation mode
 final_weights = model(sequence_data).detach().numpy().flatten()
-print("------------------------------------------------------")
+print("-------------------------------------")
 for i, weight in enumerate(final_weights):
     print(f"Server {i} Traffic Weight: {weight:.4f}")
-print("------------------------------------------------------")
+print("-------------------------------------")

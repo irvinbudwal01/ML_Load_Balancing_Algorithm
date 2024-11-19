@@ -1,4 +1,0 @@
-server, avg_latency, avg_packets_dropped, avg_server_utilization
-server_1, 56, 32, 0.7
-server_2, 51, 15, 0.9
-server_3, 22, 2, 0.4

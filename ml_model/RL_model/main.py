@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 # Load and preprocess data
-data = pd.read_csv('network_data.csv')
+data = pd.read_csv('../dummy_data/network_data.csv')
 data.columns = data.columns.str.strip()  # Clean column names
 
 # Extract input features (avg_latency, avg_packets_dropped, avg_server_utilization)
@@ -37,6 +37,9 @@ def reward_function(weights, latency, packets_dropped, server_utilization):
     return total_reward
 
 
+print("-------------------------------------")
+print("RL Model")
+print("-------------------------------------")
 # Training loop update
 epochs = 100
 for epoch in range(epochs):
@@ -68,7 +71,7 @@ for epoch in range(epochs):
 model.eval()  # Set model to evaluation mode
 final_weights = model(sequence_data).detach().numpy().flatten()
 
-print("------------------------------------------------------")
+print("-------------------------------------")
 for i, weight in enumerate(final_weights):
     print(f"Server {i} Traffic Weight: {weight:.4f}")
-print("------------------------------------------------------")
+print("-------------------------------------")
