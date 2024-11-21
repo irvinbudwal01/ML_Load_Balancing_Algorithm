@@ -1,4 +1,25 @@
-server  , avg_latency, avg_packets_dropped, avg_server_utilization
-server_1, 56         , 32                 , 0.7
-server_1, 51         , 15                 , 0.9
-server_1, 22         , 2                  , 0.4
+server  , avg_latency, total_packets_dropped, server_utilization
+server_1, 56         , 32                   , 0.7
+server_2, 51         , 15                   , 0.9
+server_3, 22         , 2                    , 0.4
+server_1, 23         , 4                    , 0.32
+server_2, 57         , 1                    , 0.83
+server_3, 37         , 44                   , 0.77
+server_1, 44         , 34                   , 0.32
+server_2, 35         , 31                   , 0.31
+server_3, 55         , 8                    , 0.45
+server_1, 27         , 44                   , 0.63
+server_2, 25         , 20                   , 0.35
+server_3, 45         , 42                   , 0.98
+server_1, 33         , 38                   , 0.78
+server_2, 38         , 22                   , 0.57
+server_3, 41         , 16                   , 0.43
+server_1, 33         , 39                   , 0.61
+server_2, 20         , 3                    , 0.61
+server_3, 36         , 40                   , 0.55
+server_1, 28         , 14                   , 0.94
+server_2, 58         , 16                   , 0.58
+server_3, 43         , 30                   , 0.46
+server_1, 31         , 7                    , 0.78
+server_2, 29         , 33                   , 0.42
+server_3, 13         , 32                   , 0.73

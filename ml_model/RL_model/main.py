@@ -9,8 +9,8 @@ import numpy as np
 data = pd.read_csv('../dummy_data/network_data.csv')
 data.columns = data.columns.str.strip()  # Clean column names
 
-# Extract input features (avg_latency, avg_packets_dropped, avg_server_utilization)
-input_features = ['avg_latency', 'avg_packets_dropped', 'avg_server_utilization']
+# Extract input features (avg_latency, total_packets_dropped, server_utilization)
+input_features = ['avg_latency', 'total_packets_dropped', 'server_utilization']
 sequence_data = torch.tensor(data[input_features].values, dtype=torch.float32).unsqueeze(0)  # Shape: (1, num_servers, 3)
 
 # Define Model
@@ -73,5 +73,5 @@ final_weights = model(sequence_data).detach().numpy().flatten()
 
 print("-------------------------------------")
 for i, weight in enumerate(final_weights):
-    print(f"Server {i} Traffic Weight: {weight:.4f}")
+    print(f"Server {i + 1} Traffic Weight: {weight:.4f}")
 print("-------------------------------------")

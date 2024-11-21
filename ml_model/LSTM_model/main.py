@@ -8,14 +8,14 @@ import pandas as pd
 data = pd.read_csv('../dummy_data/network_data.csv')
 data.columns = data.columns.str.strip()  # Clean column names
 
-# Extract input features (avg_latency, avg_packets_dropped, avg_server_utilization)
-input_features = ['avg_latency', 'avg_packets_dropped', 'avg_server_utilization']
+# Extract input features (avg_latency, total_packets_dropped, server_utilization)
+input_features = ['avg_latency', 'total_packets_dropped', 'server_utilization']
 sequence_data = torch.tensor(data[input_features].values, dtype=torch.float32).unsqueeze(0)  # Shape: (1, num_servers, 3)
 
 # Define Model
 input_size = len(input_features)  # Number of features per server
 hidden_size = 64  # Hidden size for the LSTM
-output_size = len(data)  # Number of servers (each server gets a weight)
+output_size = 3  # Number of servers (each server gets a weight)
 model = NetworkOptimizer(input_size, hidden_size, output_size)
 
 # Define Loss and Optimizer
@@ -51,5 +51,5 @@ model.eval()  # Set model to evaluation mode
 final_weights = model(sequence_data).detach().numpy().flatten()
 print("-------------------------------------")
 for i, weight in enumerate(final_weights):
-    print(f"Server {i} Traffic Weight: {weight:.4f}")
+    print(f"Server {i + 1} Traffic Weight: {weight:.4f}")
 print("-------------------------------------")
