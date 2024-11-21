@@ -4,19 +4,15 @@ import random
 from random import expovariate
 from functools import partial
 
+from ns.flow.flow import Flow
 
-from ns.flow.cc import TCPReno
-from ns.flow.cubic import TCPCubic
-from ns.flow.flow import AppType, Flow
-from ns.packet.tcp_generator import TCPPacketGenerator
 from ns.packet.dist_generator import DistPacketGenerator
-from ns.packet.tcp_sink import TCPSink
+
 from ns.packet.sink import PacketSink
 from ns.port.wire import Wire
-from ns.switch.switch import SimplePacketSwitch
-#from ns.switch.switch import RandomSwitch
+
 from ns.demux.random_demux import RandomDemux
-from ns.demux.flow_demux import FlowDemux
+
 from ns.port.port import Port
 
 import torch
@@ -24,7 +20,7 @@ import torch.optim as optim
 import torch.nn as nn
 from model import NetworkOptimizer
 import pandas as pd
-import numpy as np
+import csv
 
 def ml_model():
 
@@ -134,11 +130,11 @@ def delay_dist3():
     #return 0.5
     return random.uniform(0,.5)
 
-final_weights = ml_model()
+final_weights = ml_model() #receive output
 
 env = simpy.Environment()
 
-flow = Flow(
+flow = Flow( #define flows for each sender
     fid=0,
     src="flow 1",
     dst="flow 1",
@@ -184,7 +180,7 @@ flow5 = Flow(
 )
 
 
-sender = DistPacketGenerator(env, "flow_1",packet_arrival, packet_size, flow_id=0)
+sender = DistPacketGenerator(env, "flow_1",packet_arrival, packet_size, flow_id=0) #UDP senders
 
 sender2 = DistPacketGenerator(env, "flow_2", packet_arrival, packet_size, flow_id=1)
 
@@ -194,7 +190,7 @@ sender4 = DistPacketGenerator(env, "flow_4", packet_arrival, packet_size, flow_i
 
 sender5 = DistPacketGenerator(env, "flow_5", packet_arrival, packet_size, flow_id=4)
 
-wire1_downstream = Wire(env, delay_dist)
+wire1_downstream = Wire(env, delay_dist) #wires for network
 wire2_downstream = Wire(env, delay_dist)
 wire3_downstream = Wire(env, delay_dist)
 wire4_downstream = Wire(env, delay_dist)
@@ -203,23 +199,23 @@ wire6_downstream = Wire(env, delay_dist1)
 wire7_downstream = Wire(env, delay_dist2)
 wire8_downstream = Wire(env, delay_dist3)
 
-port1 = Port(env, rate=1200, qlimit=300)
+port1 = Port(env, rate=1200, qlimit=300) #ports to represent sink specs
 port2 = Port(env, rate=1000, qlimit=200)
 port3 = Port(env, rate=1100, qlimit=250)
 
-receiver = PacketSink(env, rec_waits=True, debug=False)
+receiver = PacketSink(env, rec_waits=True, debug=False) #UDP sinks
 
 receiver2 = PacketSink(env, rec_waits=True, debug=False)
 
 receiver3 = PacketSink(env, rec_waits=True, debug=False)
 
-#weights = [.25, .5, .25]
+
 #normalize weights
-weights = [w / sum(final_weights) for w in final_weights]
+#weights = [w / sum(final_weights) for w in final_weights]
 
-randomMux = RandomDemux(env, weights)
+randomMux = RandomDemux(env, final_weights) #random demux to receive weights for each sink
 
-sender.out = wire1_downstream
+sender.out = wire1_downstream #wired topology
 sender2.out = wire2_downstream
 sender3.out = wire3_downstream
 sender4.out = wire4_downstream
@@ -231,12 +227,12 @@ wire3_downstream.out = randomMux
 wire4_downstream.out = randomMux
 wire5_downstream.out = randomMux
 
-randomMux.outs[0] = wire6_downstream #going to sinks down
+randomMux.outs[0] = wire6_downstream #going to sinks
 randomMux.outs[1] = wire7_downstream
 randomMux.outs[2] = wire8_downstream
 
 
-wire6_downstream.out = port1
+wire6_downstream.out = port1 #demux goes to ports -> sinks
 port1.out = receiver
 wire7_downstream.out = port2
 port2.out = receiver2
@@ -263,3 +259,15 @@ print("{:.2f}".format(port1.packets_received/ 500),
 # print((receiver.packets_received[0] + receiver.packets_received[1] + receiver.packets_received[2] + receiver.packets_received[3] + receiver.packets_received[4]) / 100, 
 #       (receiver2.packets_received[0] + receiver2.packets_received[1] + receiver2.packets_received[2] + receiver2.packets_received[3] + receiver2.packets_received[4]) / 60, 
 #       (receiver3.packets_received[0] + receiver3.packets_received[1] + receiver3.packets_received[2] + receiver3.packets_received[3] + receiver3.packets_received[4]) / 80)
+
+##data to add to .csv
+#for sink 1
+
+new_data = [["server_1", "{:.2f}".format(sum(receiver.waits[0])/len(receiver.waits[0])), port1.packets_dropped, "{:.2f}".format(port1.packets_received/ 500)],
+            ["server_2", "{:.2f}".format(sum(receiver2.waits[0])/len(receiver2.waits[0])), port2.packets_dropped, "{:.2f}".format(port2.packets_received/ 300)],
+            ["server_3", "{:.2f}".format(sum(receiver3.waits[0])/len(receiver3.waits[0])), port3.packets_dropped, "{:.2f}".format(port3.packets_received/ 450)]]
+
+with open('../dummy_data/network_data.csv', 'a', newline='') as file:
+    writer = csv.writer(file)
+
+    writer.writerows(new_data)
