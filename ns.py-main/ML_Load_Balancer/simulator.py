@@ -17,22 +17,124 @@ from ns.switch.switch import SimplePacketSwitch
 #from ns.switch.switch import RandomSwitch
 from ns.demux.random_demux import RandomDemux
 from ns.demux.flow_demux import FlowDemux
+from ns.port.port import Port
+
+import torch
+import torch.optim as optim
+import torch.nn as nn
+from model import NetworkOptimizer
+import pandas as pd
+import numpy as np
+
+def ml_model():
+
+    # Load and preprocess data
+    data = pd.read_csv('../dummy_data/network_data.csv')
+    data.columns = data.columns.str.strip()  # Clean column names
+
+    # Extract input features (avg_latency, avg_packets_dropped, avg_server_utilization)
+    input_features = ['avg_latency', 'avg_packets_dropped', 'avg_server_utilization']
+    sequence_data = torch.tensor(data[input_features].values, dtype=torch.float32).unsqueeze(0)  # Shape: (1, num_servers, 3)
+
+    # Define Model
+    input_size = len(input_features)  # Number of features per server
+    hidden_size = 64  # Hidden size for the LSTM
+    output_size = 3  # 3 servers, so we output 3 traffic weights
+    model = NetworkOptimizer(input_size, hidden_size, output_size)
+
+    # Define Loss and Optimizer
+    optimizer = optim.Adam(model.parameters(), lr=0.01)
+
+    def reward_function(weights, latency, packets_dropped, server_utilization):
+        # Normalize weights to ensure they sum to 1
+        weights = weights / weights.sum()
+
+        # Stronger penalty for any weight greater than 60% or less than 10%
+        imbalance_penalty = 200 * (max(weights[0], 1 - weights[0]) + max(weights[1], 1 - weights[1]) + max(weights[2], 1 - weights[2]))
+
+        # Performance reward (negative for latency and dropped packets, positive for utilization)
+        performance_reward = -latency.sum() - packets_dropped.sum() + server_utilization.sum()
+
+        # Total reward: balance between performance and balanced traffic distribution
+        total_reward = performance_reward - imbalance_penalty
+        return total_reward
+
+
+    print("-------------------------------------")
+    print("RL Model")
+    print("-------------------------------------")
+    # Training loop update
+    epochs = 100
+    for epoch in range(epochs):
+        model.train()  # Set model to training mode
+
+        # Forward pass
+        output = model(sequence_data)  # Predict weights for servers
+
+        # Ensure output tensor requires gradients
+        output = output.squeeze().requires_grad_()  # Squeeze and ensure requires_grad=True
+
+        # Sample server performance data for the current step (dummy data for now)
+        latency = torch.tensor([50, 40, 30], dtype=torch.float32, requires_grad=True)  # Example latency values
+        packets_dropped = torch.tensor([5, 3, 2], dtype=torch.float32, requires_grad=True)  # Example dropped packets
+        server_utilization = torch.tensor([0.7, 0.8, 0.9], dtype=torch.float32, requires_grad=True)  # Example server utilization
+
+        # Calculate the reward based on the model's output and performance data
+        reward = reward_function(output, latency, packets_dropped, server_utilization)
+
+        # Backward pass and optimization
+        optimizer.zero_grad()
+        reward.backward()  # Use reward as the gradient
+        optimizer.step()
+
+        if (epoch + 1) % 10 == 0:
+            print(f"Epoch [{epoch + 1}/{epochs}], Reward: {reward.item():.4f}")
+
+    # Display final output after training
+    model.eval()  # Set model to evaluation mode
+    final_weights = model(sequence_data).detach().numpy().flatten()
+
+    print("-------------------------------------")
+    for i, weight in enumerate(final_weights):
+        print(f"Server {i} Traffic Weight: {weight:.4f}")
+    print("-------------------------------------")
+
+    return final_weights
+
+
 
 
 def packet_arrival():
     """Packets arrive with a random interval between 0 and 1 seconds."""
+    #return .4
     return random.uniform(0,1)
 
 
 def packet_size():
     """The packets have a constant size of 1024 bytes."""
-    return 512
+    return 256
 
 
 def delay_dist():
     """Network wires experience a constant propagation delay of 0.1 seconds."""
-    return 0.1
+    #return 0.1
+    return random.uniform(0,.2)
 
+def delay_dist1():
+    """Network wires experience a constant propagation delay of 0.2 seconds."""
+    #return 0.2
+    return random.uniform(0,.2)
+
+def delay_dist2():
+    """Network wires experience a constant propagation delay of 0.6 seconds."""
+    return random.uniform(0,.6)
+
+def delay_dist3():
+    """Network wires experience a constant propagation delay of 0.5 seconds."""
+    #return 0.5
+    return random.uniform(0,.5)
+
+final_weights = ml_model()
 
 env = simpy.Environment()
 
@@ -82,7 +184,7 @@ flow5 = Flow(
 )
 
 
-sender = DistPacketGenerator(env, "flow_1", packet_arrival, packet_size, flow_id=0)
+sender = DistPacketGenerator(env, "flow_1",packet_arrival, packet_size, flow_id=0)
 
 sender2 = DistPacketGenerator(env, "flow_2", packet_arrival, packet_size, flow_id=1)
 
@@ -97,20 +199,23 @@ wire2_downstream = Wire(env, delay_dist)
 wire3_downstream = Wire(env, delay_dist)
 wire4_downstream = Wire(env, delay_dist)
 wire5_downstream = Wire(env, delay_dist)
-wire6_downstream = Wire(env, delay_dist)
-wire7_downstream = Wire(env, delay_dist)
-wire8_downstream = Wire(env, delay_dist)
+wire6_downstream = Wire(env, delay_dist1)
+wire7_downstream = Wire(env, delay_dist2)
+wire8_downstream = Wire(env, delay_dist3)
 
+port1 = Port(env, rate=1200, qlimit=300)
+port2 = Port(env, rate=1000, qlimit=200)
+port3 = Port(env, rate=1100, qlimit=250)
 
-receiver = PacketSink(env, rec_waits=True, debug=True)
+receiver = PacketSink(env, rec_waits=True, debug=False)
 
-receiver2 = PacketSink(env, rec_waits=True, debug=True)
+receiver2 = PacketSink(env, rec_waits=True, debug=False)
 
-receiver3 = PacketSink(env, rec_waits=True, debug=True)
+receiver3 = PacketSink(env, rec_waits=True, debug=False)
 
-weights = [.25, .5, .25]
+#weights = [.25, .5, .25]
 #normalize weights
-weights = [w / sum(weights) for w in weights]
+weights = [w / sum(final_weights) for w in final_weights]
 
 randomMux = RandomDemux(env, weights)
 
@@ -131,59 +236,30 @@ randomMux.outs[1] = wire7_downstream
 randomMux.outs[2] = wire8_downstream
 
 
-wire6_downstream.out = receiver #connect switch to sinks down
-wire7_downstream.out = receiver2
-wire8_downstream.out = receiver3
+wire6_downstream.out = port1
+port1.out = receiver
+wire7_downstream.out = port2
+port2.out = receiver2
+wire8_downstream.out = port3
+port3.out = receiver3
 
-#receiver.out = wire6_upstream #connect sinks to switch up
-#receiver2.out = wire7_upstream
-#receiver3.out = wire8_upstream
+env.run(until=100) 
 
-#wire6_upstream.out = switch #connect sinks to switch up
-#wire7_upstream.out = switch
-#wire8_upstream.out = switch
+print("Receiver 1 Average Packet Delays: ", "{:.2f}".format(sum(receiver.waits[0])/len(receiver.waits[0])))
 
-#wire1_upstream.out = sender #connect to generators up
-#wire2_upstream.out = sender2
-#wire3_upstream.out = sender3
-#wire4_upstream.out = sender4
-#wire5_upstream.out = sender5
+print("Receiver 2 Average Packet Delays: ", "{:.2f}".format(sum(receiver2.waits[0])/len(receiver2.waits[0])))
 
-env.run(until=100) #*******************************TO FIGURE OUT: IT SEEMS FLOW DEMUX LETS YOU DECIDE WHICH OUTPUTS GO TO WHICH SINK. RANDOM DEMUX RANDOMIZES AMONG ALL PORTS?
-                   #IT NEEDS TO ONLY RANDOMIZE ON OUTPUTS THAT GO TO SINKS. TO SIMPLIFY THIS PROCESS, CONVERT NETWORK BACK TO UDP INSTEAD OF TCP. FIND SOLUTION FIRST, THEN SWITCH
-                   #BACK TO TCP IF POSSIBLE. ALSO, SWITCH CONTAINS WEIGHTS ARRAY.
+print("Receiver 3 Average Packet Delays: ", "{:.2f}".format(sum(receiver3.waits[0])/len(receiver3.waits[0])))
 
-# print(
-#     "Receiver 1 packet delays: "
-#     + ", ".join(["{:.2f}".format(x) for x in receiver.waits[0]])
-# )
-# print(
-#     "Receiver 2 packet delays: "
-#     + ", ".join(["{:.2f}".format(x) for x in receiver2.waits[1]])
-# )
+packets_sent = sender.packets_sent + sender2.packets_sent + sender3.packets_sent + sender4.packets_sent + sender5.packets_sent
+print("Packets Dropped: ", port1.packets_dropped + port2.packets_dropped + port3.packets_dropped)
 
-# print(
-#     "Receiver 3 packet delays: "
-#     + ", ".join(["{:.2f}".format(x) for x in receiver3.waits[2]])
-# )
+print("server utilization")
 
-print(
-    "Receiver 1 packet delays: " + ", ".join(["{:.2f}".format(x) for x in receiver.waits[0]])
-)
+print("{:.2f}".format(port1.packets_received/ 500), 
+      "{:.2f}".format(port2.packets_received/ 300), 
+      "{:.2f}".format(port3.packets_received/ 450))
 
-print(
-    "Receiver 2 packet delays: "
-    + ", ".join(["{:.2f}".format(x) for x in receiver2.waits[1]])
-)
-
-print(
-    "Receiver 3 packet delays: "
-    + ", ".join(["{:.2f}".format(x) for x in receiver3.waits[2]])
-)
-
-print("packets dropped")
-print("Received:" ,receiver.packets_received[0] + receiver2.packets_received[0] + receiver3.packets_received[0])
-print("Sent:" , sender.packets_sent + sender2.packets_sent + sender3.packets_sent + sender4.packets_sent + sender5.packets_sent)
-
-print("server utilization") #server 1 takes 50, server 2 takes 30, server 3 takes 40
-print(receiver.packets_received[0] / 50, receiver2.packets_received[0] / 30, receiver3.packets_received[0] / 40)
+# print((receiver.packets_received[0] + receiver.packets_received[1] + receiver.packets_received[2] + receiver.packets_received[3] + receiver.packets_received[4]) / 100, 
+#       (receiver2.packets_received[0] + receiver2.packets_received[1] + receiver2.packets_received[2] + receiver2.packets_received[3] + receiver2.packets_received[4]) / 60, 
+#       (receiver3.packets_received[0] + receiver3.packets_received[1] + receiver3.packets_received[2] + receiver3.packets_received[3] + receiver3.packets_received[4]) / 80)
