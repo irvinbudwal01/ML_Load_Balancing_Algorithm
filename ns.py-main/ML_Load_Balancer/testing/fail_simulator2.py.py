@@ -93,13 +93,29 @@ sender4 = DistPacketGenerator(env, "flow_4", packet_arrival, packet_size, flow_i
 sender5 = DistPacketGenerator(env, "flow_5", packet_arrival, packet_size, flow_id=4)
 
 wire1_downstream = Wire(env, delay_dist)
+#wire1_upstream = Wire(env, delay_dist)
 wire2_downstream = Wire(env, delay_dist)
+#wire2_upstream = Wire(env, delay_dist)
 wire3_downstream = Wire(env, delay_dist)
+#wire3_upstream = Wire(env, delay_dist)
 wire4_downstream = Wire(env, delay_dist)
+#wire4_upstream = Wire(env, delay_dist)
 wire5_downstream = Wire(env, delay_dist)
+#wire5_upstream = Wire(env, delay_dist)
 wire6_downstream = Wire(env, delay_dist)
+#wire6_upstream = Wire(env, delay_dist)
 wire7_downstream = Wire(env, delay_dist)
+#wire7_upstream = Wire(env, delay_dist)
 wire8_downstream = Wire(env, delay_dist)
+#wire8_upstream = Wire(env, delay_dist)
+
+switch = SimplePacketSwitch(
+    env,
+    nports=3,
+    port_rate=16134,  # in bits/second
+    buffer_size=2,  # in packets
+    debug=True,
+)
 
 
 receiver = PacketSink(env, rec_waits=True, debug=True)
@@ -108,28 +124,28 @@ receiver2 = PacketSink(env, rec_waits=True, debug=True)
 
 receiver3 = PacketSink(env, rec_waits=True, debug=True)
 
-weights = [.25, .5, .25]
+#switch.weights = [0.1, 0.2, 0.3, 0.1, 0.1, 0.05, 0.05, 0.1]
+switch.weights = [.25, .5, .25]
 #normalize weights
-weights = [w / sum(weights) for w in weights]
+switch.weights = [w / sum(switch.weights) for w in switch.weights]
 
-randomMux = RandomDemux(env, weights)
+switch.demux = RandomDemux(switch.ports, switch.weights)
 
-sender.out = wire1_downstream
-sender2.out = wire2_downstream
-sender3.out = wire3_downstream
-sender4.out = wire4_downstream
-sender5.out = wire5_downstream
+#switch.demux = FlowDemux([wire6_downstream, wire7_downstream, wire8_downstream])
 
-wire1_downstream.out = randomMux
-wire2_downstream.out = randomMux
-wire3_downstream.out = randomMux
-wire4_downstream.out = randomMux
-wire5_downstream.out = randomMux
+print(switch.demux.outs)
 
-randomMux.outs[0] = wire6_downstream #going to sinks down
-randomMux.outs[1] = wire7_downstream
-randomMux.outs[2] = wire8_downstream
+switch.demux.outs[0].out = wire6_downstream #going to sinks down
+switch.demux.outs[1].out = wire7_downstream
+switch.demux.outs[2].out = wire8_downstream
 
+print(switch.demux.outs)
+
+# switch.demux.outs[3] = wire1_upstream #going to generators up
+# switch.demux.outs[4] = wire2_upstream
+# switch.demux.outs[5] = wire3_upstream
+# switch.demux.outs[6] = wire4_upstream
+# switch.demux.outs[7] = wire5_upstream
 
 wire6_downstream.out = receiver #connect switch to sinks down
 wire7_downstream.out = receiver2
@@ -153,24 +169,10 @@ env.run(until=100) #*******************************TO FIGURE OUT: IT SEEMS FLOW 
                    #IT NEEDS TO ONLY RANDOMIZE ON OUTPUTS THAT GO TO SINKS. TO SIMPLIFY THIS PROCESS, CONVERT NETWORK BACK TO UDP INSTEAD OF TCP. FIND SOLUTION FIRST, THEN SWITCH
                    #BACK TO TCP IF POSSIBLE. ALSO, SWITCH CONTAINS WEIGHTS ARRAY.
 
-# print(
-#     "Receiver 1 packet delays: "
-#     + ", ".join(["{:.2f}".format(x) for x in receiver.waits[0]])
-# )
-# print(
-#     "Receiver 2 packet delays: "
-#     + ", ".join(["{:.2f}".format(x) for x in receiver2.waits[1]])
-# )
-
-# print(
-#     "Receiver 3 packet delays: "
-#     + ", ".join(["{:.2f}".format(x) for x in receiver3.waits[2]])
-# )
-
 print(
-    "Receiver 1 packet delays: " + ", ".join(["{:.2f}".format(x) for x in receiver.waits[0]])
+    "Receiver 1 packet delays: "
+    + ", ".join(["{:.2f}".format(x) for x in receiver.waits[0]])
 )
-
 print(
     "Receiver 2 packet delays: "
     + ", ".join(["{:.2f}".format(x) for x in receiver2.waits[1]])
@@ -182,8 +184,8 @@ print(
 )
 
 print("packets dropped")
-print("Received:" ,receiver.packets_received[0] + receiver2.packets_received[0] + receiver3.packets_received[0])
-print("Sent:" , sender.packets_sent + sender2.packets_sent + sender3.packets_sent + sender4.packets_sent + sender5.packets_sent)
+print(receiver.packets_received[0] + receiver2.packets_received[0] + receiver3.packets_received[0])
+print(sender.packets_sent + sender2.packets_sent + sender3.packets_sent + sender4.packets_sent)
 
 print("server utilization") #server 1 takes 50, server 2 takes 30, server 3 takes 40
 print(receiver.packets_received[0] / 50, receiver2.packets_received[0] / 30, receiver3.packets_received[0] / 40)

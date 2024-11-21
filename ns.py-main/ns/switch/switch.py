@@ -5,10 +5,12 @@ from collections.abc import Callable
 
 from ns.port.port import Port
 from ns.demux.fib_demux import FIBDemux
+from ns.demux.random_demux import RandomDemux
 from ns.scheduler.wfq import WFQServer
 from ns.scheduler.drr import DRRServer
 from ns.scheduler.virtual_clock import VirtualClockServer
 from ns.scheduler.sp import SPServer
+
 
 
 class SimplePacketSwitch:
@@ -48,7 +50,8 @@ class SimplePacketSwitch:
                      limit_bytes=False,
                      element_id=f"{element_id}_{port}",
                      debug=debug))
-        self.demux = FIBDemux(fib=None, outs=self.ports, default=None)
+        self.demux = RandomDemux(self.ports, self.weights)
+        #self.demux = FIBDemux(fib=None, outs=self.ports, default=None)
 
     def put(self, packet):
         """ Sends a packet to this element. """
@@ -150,6 +153,49 @@ class FairPacketSwitch:
             self.ports.append(scheduler)
 
         self.demux = FIBDemux(fib=None, outs=self.egress_ports, default=None)
+
+    def put(self, packet):
+        """ Sends a packet to this element. """
+        self.demux.put(packet)
+
+class RandomSwitch:
+    """ Implements a packet switch with a FIFO bounded buffer on each of the outgoing ports.
+
+        Parameters
+        ----------
+        env: simpy.Environment
+            the simulation environment.
+        nports: int
+            the total number of ports on this switch.
+        port_rate: float
+            the bit rate of the port.
+        buffer_size: int
+            the size of an outgoing port' bounded buffer, in packets.
+        element_id: str
+            The (optional) element ID of this component.
+        debug: bool
+            If True, prints more verbose debug information.
+    """
+
+    def __init__(self,
+                 env,
+                 nports: int,
+                 port_rate: float,
+                 buffer_size: int,
+                 element_id: str = "",
+                 debug: bool = False) -> None:
+        self.env = env
+        self.weights = []
+        self.ports = []
+        for port in range(nports):
+            self.ports.append(
+                Port(env,
+                     rate=port_rate,
+                     qlimit=buffer_size,
+                     limit_bytes=False,
+                     element_id=f"{element_id}_{port}",
+                     debug=debug))
+        self.demux = RandomDemux(self.ports, self.weights)
 
     def put(self, packet):
         """ Sends a packet to this element. """
