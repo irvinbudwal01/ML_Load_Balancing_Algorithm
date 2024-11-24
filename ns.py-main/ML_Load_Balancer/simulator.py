@@ -70,10 +70,10 @@ def ml_model():
         # Ensure output tensor requires gradients
         output = output.squeeze().requires_grad_()  # Squeeze and ensure requires_grad=True
 
-        # Sample server performance data for the current step (dummy data for now)
-        latency = torch.tensor([50, 40, 30], dtype=torch.float32, requires_grad=True)  # Example latency values
-        packets_dropped = torch.tensor([5, 3, 2], dtype=torch.float32, requires_grad=True)  # Example dropped packets
-        server_utilization = torch.tensor([0.7, 0.8, 0.9], dtype=torch.float32, requires_grad=True)  # Example server utilization
+        # Server performance data for the current step 
+        latency = torch.tensor([200, 600, 500], dtype=torch.float32, requires_grad=True) # In ms
+        packets_dropped = torch.tensor([0, 0, 0], dtype=torch.float32, requires_grad=True)  
+        server_utilization = torch.tensor([500, 300, 450], dtype=torch.float32, requires_grad=True)  # Server max capacity
 
         # Calculate the reward based on the model's output and performance data
         reward = reward_function(output, latency, packets_dropped, server_utilization)
