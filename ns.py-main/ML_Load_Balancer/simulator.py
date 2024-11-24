@@ -46,7 +46,7 @@ def ml_model():
         weights = weights / weights.sum()
 
         # Stronger penalty for any weight greater than 60% or less than 10%
-        imbalance_penalty = 200 * (max(weights[0], 1 - weights[0]) + max(weights[1], 1 - weights[1]) + max(weights[2], 1 - weights[2]))
+        imbalance_penalty = 1000 * (max(weights[0], 1 - weights[0]) + max(weights[1], 1 - weights[1]) + max(weights[2], 1 - weights[2]))
 
         # Performance reward (negative for latency and dropped packets, positive for utilization)
         performance_reward = -latency.sum() - packets_dropped.sum() + server_utilization.sum()
@@ -281,10 +281,12 @@ while(i < 80):
                 ["server_2", delay2, port2.packets_dropped, "{:.2f}".format(port2.packets_received/ 300)],
                 ["server_3", delay3, port3.packets_dropped, "{:.2f}".format(port3.packets_received/ 450)]]
     
-    weight_data = [["Weights: ", final_weights[0],final_weights[1],final_weights[2]],
-                   ["Stats: ", delay1 + " ", delay2 + " ", delay3 + " " ,port1.packets_dropped+port2.packets_dropped+port3.packets_dropped, " ",
-                                                                          peak_util]]
+    avg_latency = (float(delay1) + float(delay2) + float(delay3)) / 3
 
+    weight_data = [["Weights: ", "{:.2f}".format(final_weights[0]),"{:.2f}".format(final_weights[1]),"{:.2f}".format(final_weights[2])],
+                   ["Stats: ", "{:.2f}".format(avg_latency) + " " ,port1.packets_dropped+port2.packets_dropped+port3.packets_dropped, " ",
+                                                                          "{:.2f}".format(peak_util)]]
+    
     with open('../dummy_data/network_data.csv', 'a', newline='') as file:
         writer = csv.writer(file)
 
