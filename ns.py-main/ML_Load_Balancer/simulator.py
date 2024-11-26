@@ -128,7 +128,7 @@ def delay_dist3():
     return 0.5
 
 i = 0
-while(i < 1):
+while(i < 100):
 
     final_weights = ml_model() #receive output
 
