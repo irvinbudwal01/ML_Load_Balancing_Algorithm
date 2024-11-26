@@ -46,7 +46,7 @@ def ml_model():
         weights = weights / weights.sum()
 
         # Stronger penalty for any weight greater than 60% or less than 10%
-        imbalance_penalty = 1000 * (max(weights[0], 1 - weights[0]) + max(weights[1], 1 - weights[1]) + max(weights[2], 1 - weights[2]))
+        imbalance_penalty = 1500 * (max(weights[0], 1 - weights[0]) + max(weights[1], 1 - weights[1]) + max(weights[2], 1 - weights[2]))
 
         # Performance reward (negative for latency and dropped packets, positive for utilization)
         performance_reward = -latency.sum() - packets_dropped.sum() + server_utilization.sum()
@@ -114,25 +114,21 @@ def packet_size():
 def delay_dist():
     """Network wires experience a constant propagation delay of 0.1 seconds."""
     return 0.1
-    #return random.uniform(0,.2)
 
 def delay_dist1():
     """Network wires experience a constant propagation delay of 0.2 seconds."""
     return 0.2
-    #return random.uniform(0,.2)
 
 def delay_dist2():
     """Network wires experience a constant propagation delay of 0.6 seconds."""
     return 0.6
-    #return random.uniform(0,.6)
 
 def delay_dist3():
     """Network wires experience a constant propagation delay of 0.5 seconds."""
     return 0.5
-    #return random.uniform(0,.5)
 
 i = 0
-while(i < 80):
+while(i < 1):
 
     final_weights = ml_model() #receive output
 
@@ -216,8 +212,8 @@ while(i < 80):
 
     #normalize weights
     #weights = [w / sum(final_weights) for w in final_weights]
-
-    randomMux = RandomDemux(env, final_weights) #random demux to receive weights for each sink
+    weights = [.33, .33, .33]
+    randomMux = RandomDemux(env, weights) #random demux to receive weights for each sink
 
     sender.out = wire1_downstream #wired topology
     sender2.out = wire2_downstream
